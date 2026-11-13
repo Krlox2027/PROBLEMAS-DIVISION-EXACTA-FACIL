@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30 Divisiones Exactas Fáciles - con el profesor Carlos Huancaya Matos</title>
+    <!-- Carga de Tailwind CSS para el diseño responsivo y moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de la fuente Inter desde Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Carga de Tone.js para efectos de sonido suaves y agradables -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Carga de Canvas Confetti para celebrar las respuestas correctas -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #4f46e5 0%, #9333ea 50%, #ec4899 100%);
+            min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        
+        /* Animación de sacudida cuando la respuesta es incorrecta */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+        
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Animación de pulso suave al acertar */
+        @keyframes popSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pop {
+            animation: popSuccess 0.3s ease-out;
+        }
+
+        /* Animación de rebote para la cara triste */
+        @keyframes sadBounce {
+            0%, 100% { transform: scale(0.8); opacity: 0; }
+            20% { transform: scale(1.1); opacity: 1; }
+            40% { transform: scale(0.95); opacity: 1; }
+            60% { transform: scale(1.02); opacity: 1; }
+            85% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-sad-face {
+            animation: sadBounce 1.4s ease-in-out forwards;
+        }
+
+        /* Ocultar flechas del input numérico */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4 sm:p-6 text-slate-800 relative">
+
+    <!-- Superposición de Cara Triste en toda la pantalla cuando falla -->
+    <div id="sad-overlay" class="fixed inset-0 z-50 pointer-events-none hidden flex-col items-center justify-center bg-rose-950/75 backdrop-blur-sm transition-opacity duration-300">
+        <div id="sad-content" class="flex flex-col items-center text-center p-6">
+            <span class="text-[11rem] sm:text-[15rem] leading-none drop-shadow-2xl select-none">😢</span>
+            <p class="text-3xl sm:text-5xl font-black text-white mt-4 drop-shadow-lg tracking-wide">
+                ¡Ups! Revisa tu cuaderno
+            </p>
+            <p class="text-xl sm:text-2xl font-bold text-rose-200 mt-2">
+                Vuelve a intentarlo
+            </p>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal tipo Tarjeta ("Página" individual por problema) -->
+    <main class="w-full max-w-4xl bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-4 border-white/60 overflow-hidden transition-all duration-300 z-10">
+        
+        <!-- Cabecera Institucional con colores vivos -->
+        <header class="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white p-6 sm:p-8 text-center shadow-lg">
+            <h1 class="text-2xl sm:text-4xl font-black tracking-tight mb-2 drop-shadow-sm">
+                🚀 Desafío de 30 Divisiones Exactas
+            </h1>
+            <p class="text-lg sm:text-2xl font-bold text-amber-100 drop-shadow-sm">
+                con el profesor Carlos Huancaya Matos
+            </p>
+        </header>
+
+        <!-- Vista de la Actividad (1 Problema por página) -->
+        <section id="quiz-screen" class="p-6 sm:p-10 flex flex-col items-center">
+            
+            <!-- Indicador de Progreso y Número de Página -->
+            <div class="w-full flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
+                <span id="page-indicator" class="text-lg sm:text-xl font-black text-purple-700 bg-purple-100 px-5 py-2 rounded-full border-2 border-purple-300 shadow-sm">
+                    Página 1 de 30
+                </span>
+                <span id="attempts-indicator" class="text-sm sm:text-base font-bold text-indigo-600 bg-indigo-50 px-4 py-1.5 rounded-full">
+                    ✏️ Resuelve en tu cuaderno y escribe el resultado
+                </span>
+            </div>
+
+            <!-- Barra de Progreso Visual Vibrante -->
+            <div class="w-full h-4 bg-slate-200 rounded-full overflow-hidden mb-8 p-0.5 shadow-inner">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 transition-all duration-500 rounded-full" style="width: 3.33%;"></div>
+            </div>
+
+            <!-- Enunciado del Problema (Letra Grande y Legible) -->
+            <div id="problem-box" class="w-full bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border-4 border-amber-300 rounded-3xl p-6 sm:p-10 mb-8 text-center shadow-md">
+                <p id="problem-text" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 leading-snug sm:leading-tight">
+                    Cargando problema...
+                </p>
+            </div>
+
+            <!-- Zona de Respuesta e Interacción -->
+            <div class="w-full max-w-lg flex flex-col items-center gap-5">
+                <label for="answer-input" class="text-xl sm:text-2xl font-extrabold text-indigo-900">
+                    Escribe tu respuesta exacta:
+                </label>
+                
+                <div class="w-full flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <input 
+                        type="number" 
+                        id="answer-input" 
+                        placeholder="?" 
+                        autocomplete="off"
+                        class="w-full sm:w-52 h-24 text-center text-5xl sm:text-6xl font-black text-indigo-700 bg-indigo-50/70 border-4 border-indigo-400 rounded-2xl focus:outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-200 transition-all shadow-md"
+                    >
+                    
+                    <button 
+                        id="check-btn" 
+                        onclick="validateAnswer()"
+                        class="w-full sm:w-auto h-24 px-8 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white text-2xl sm:text-3xl font-black rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 border-b-4 border-teal-800"
+                    >
+                        <span>Comprobar</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Caja de Mensajes de Retroalimentación -->
+                <div id="feedback-box" class="w-full min-h-[60px] flex items-center justify-center rounded-2xl px-4 py-3 text-center text-lg sm:text-xl font-extrabold transition-all opacity-0">
+                    <!-- Mensaje dinámico -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Pantalla Final de Felicitación -->
+        <section id="completion-screen" class="hidden p-8 sm:p-14 text-center flex-col items-center bg-gradient-to-b from-white to-emerald-50">
+            <div class="w-28 h-28 bg-gradient-to-tr from-emerald-400 to-teal-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl animate-bounce">
+                <span class="text-6xl">🏆</span>
+            </div>
+            <h2 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 mb-4">
+                ¡Felicitaciones, misión cumplida!
+            </h2>
+            <p class="text-xl sm:text-2xl text-slate-700 max-w-2xl mx-auto mb-8 leading-relaxed">
+                Has resuelto correctamente los <strong>30 problemas de divisiones exactas</strong>. Muestra esta pantalla al <strong>profesor Carlos Huancaya Matos</strong> para registrar tu nota.
+            </p>
+            <div class="bg-amber-100 border-4 border-amber-300 rounded-2xl p-6 mb-8 max-w-md mx-auto shadow-sm">
+                <p class="text-lg font-bold text-amber-900">Resumen de la sesión:</p>
+                <p id="summary-stats" class="text-2xl font-black text-orange-600 mt-1">30 / 30 Problemas Resueltos</p>
+            </div>
+            <button 
+                onclick="restartActivity()"
+                class="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xl font-black rounded-2xl shadow-lg transition-all cursor-pointer border-b-4 border-purple-900"
+            >
+                🔄 Generar Nueva Ronda Mezclada
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+        /**
+         * Banco de 30 problemas contextualizados de divisiones exactas con números más fáciles
+         * (basados en tablas de multiplicar básicas y divisiones directas de 2 cifras).
+         */
+        const problemBank = [
+            { text: "Se reparten 12 caramelos en partes iguales entre 3 niños. ¿Cuántos caramelos recibe cada niño?", answer: 4 },
+            { text: "María tiene 15 lápices y los guarda en 5 cartucheras por igual. ¿Cuántos lápices pone en cada cartuchera?", answer: 3 },
+            { text: "Hay 18 galletas para repartir entre 6 platos iguales. ¿Cuántas galletas van en cada plato?", answer: 3 },
+            { text: "Un profesor reparte 20 cuadernos entre 4 estudiantes por igual. ¿Cuántos cuadernos recibe cada uno?", answer: 5 },
+            { text: "En una caja hay 24 manzanas y se reparten en 6 bolsas iguales. ¿Cuántas manzanas tiene cada bolsa?", answer: 4 },
+            { text: "Se organizan 28 sillas en 4 filas con la misma cantidad. ¿Cuántas sillas hay en cada fila?", answer: 7 },
+            { text: "Pedro tiene 30 figuritas y las pega en 5 páginas de su álbum por igual. ¿Cuántas figuritas pega en cada página?", answer: 6 },
+            { text: "Se reparten 32 colores entre 8 alumnos en partes iguales. ¿Cuántos colores toca cada alumno?", answer: 4 },
+            { text: "Una mamá compró 35 fresas y las repartió por igual entre sus 7 hijos. ¿Cuántas fresas recibió cada hijo?", answer: 5 },
+            { text: "Hay 36 libros acomodados en 6 estantes iguales. ¿Cuántos libros hay en cada estante?", answer: 6 },
+            { text: "Se guardan 40 pelotas en 8 cajas con la misma cantidad. ¿Cuántas pelotas van en cada caja?", answer: 5 },
+            { text: "En un salón hay 42 estudiantes agrupados en 7 equipos iguales. ¿Cuántos estudiantes hay en cada equipo?", answer: 6 },
+            { text: "Lucía repartió 45 flores en 9 floreros por igual. ¿Cuántas flores colocó en cada florero?", answer: 5 },
+            { text: "Se reparten 48 naranjas en 6 mallas con igual cantidad. ¿Cuántas naranjas entran en cada malla?", answer: 8 },
+            { text: "Un panadero horneó 49 panes y los puso en 7 bandejas iguales. ¿Cuántos panes hay en cada bandeja?", answer: 7 },
+            { text: "Si 50 soles se reparten en partes iguales entre 5 amigos, ¿cuántos soles recibe cada amigo?", answer: 10 },
+            { text: "Hay 54 globos para repartir por igual entre 9 mesas de fiesta. ¿Cuántos globos van en cada mesa?", answer: 6 },
+            { text: "Un agricultor cosechó 56 sandías y las cargó en 8 carretillas por igual. ¿Cuántas sandías lleva cada carretilla?", answer: 7 },
+            { text: "Se distribuyen 60 borradores en 6 cajas con la misma cantidad. ¿Cuántos borradores hay en cada caja?", answer: 10 },
+            { text: "En una granja hay 63 pollitos repartidos por igual en 7 corrales. ¿Cuántos pollitos hay en cada corral?", answer: 9 },
+            { text: "Carlos tiene 64 canicas y las reparte en 8 bolsas iguales. ¿Cuántas canicas guarda en cada bolsa?", answer: 8 },
+            { text: "Se colocan 70 botellas de agua en 7 paquetes iguales. ¿Cuántas botellas tiene cada paquete?", answer: 10 },
+            { text: "Un tren lleva 72 pasajeros sentados por igual en 8 vagones. ¿Cuántos pasajeros van en cada vagón?", answer: 9 },
+            { text: "Se reparten 81 semillas en 9 macetas en partes iguales. ¿Cuántas semillas van en cada maceta?", answer: 9 },
+            { text: "Ana compró 27 chocolates y los repartió por igual entre 3 amigas. ¿Cuántos chocolates recibió cada una?", answer: 9 },
+            { text: "En un parque plantaron 36 árboles en 4 hileras iguales. ¿Cuántos árboles tiene cada hilera?", answer: 9 },
+            { text: "Un librero tiene 42 cuentos y los ordena en 6 cajas por igual. ¿Cuántos cuentos hay en cada caja?", answer: 7 },
+            { text: "Se reparten 64 hojas de papel entre 4 grupos de trabajo por igual. ¿Cuántas hojas recibe cada grupo?", answer: 16 },
+            { text: "Una tienda vendió 75 helados en 5 días vendiendo la misma cantidad diaria. ¿Cuántos helados vendió cada día?", answer: 15 },
+            { text: "Se reparten 84 monedas de chocolate entre 7 niños por igual. ¿Cuántas monedas recibe cada niño?", answer: 12 }
+        ];
+
+        let shuffledProblems = [];
+        let currentIndex = 0;
+        let totalMistakes = 0;
+        let isTransitioning = false;
+
+        // Sintetizador polifónico suave tipo campanita/marimba
+        let synth = null;
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: {
+                        type: "sine"
+                    },
+                    envelope: {
+                        attack: 0.02,
+                        decay: 0.25,
+                        sustain: 0.1,
+                        release: 0.9
+                    }
+                }).toDestination();
+                synth.volume.value = -6;
+            }
+        }
+
+        function playSound(type) {
+            try {
+                initAudio();
+                if (!synth) return;
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                const now = Tone.now();
+                if (type === 'success') {
+                    synth.triggerAttackRelease("C5", "8n", now);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.09);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.18);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.27);
+                } else if (type === 'error') {
+                    synth.triggerAttackRelease("G4", "8n", now);
+                    synth.triggerAttackRelease("E4", "4n", now + 0.14);
+                }
+            } catch (e) {
+                // Ignorar errores de audio
+            }
+        }
+
+        /**
+         * Algoritmo de Fisher-Yates para mezclar los 30 problemas aleatoriamente en cada ordenador
+         */
+        function shuffleProblems(array) {
+            const copy = [...array];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        /**
+         * Inicializa o reinicia la actividad
+         */
+        function startActivity() {
+            shuffledProblems = shuffleProblems(problemBank);
+            currentIndex = 0;
+            totalMistakes = 0;
+            isTransitioning = false;
+
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('completion-screen').classList.add('hidden');
+            document.getElementById('completion-screen').classList.remove('flex');
+
+            renderCurrentProblem();
+        }
+
+        /**
+         * Muestra el problema actual en pantalla
+         */
+        function renderCurrentProblem() {
+            const currentProblem = shuffledProblems[currentIndex];
+            const total = shuffledProblems.length;
+
+            document.getElementById('page-indicator').textContent = `Página ${currentIndex + 1} de ${total}`;
+            const progressPercent = ((currentIndex + 1) / total) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            document.getElementById('problem-text').textContent = currentProblem.text;
+
+            const inputEl = document.getElementById('answer-input');
+            inputEl.value = '';
+            inputEl.disabled = false;
+            inputEl.classList.remove('border-emerald-500', 'bg-emerald-100', 'text-emerald-800', 'border-rose-500', 'bg-rose-100');
+            inputEl.classList.add('border-indigo-400', 'bg-indigo-50/70');
+
+            const feedbackEl = document.getElementById('feedback-box');
+            feedbackEl.className = 'w-full min-h-[60px] flex items-center justify-center rounded-2xl px-4 py-3 text-center text-lg sm:text-xl font-extrabold transition-all opacity-0';
+            feedbackEl.textContent = '';
+
+            setTimeout(() => inputEl.focus(), 50);
+        }
+
+        /**
+         * Lanza una explosión de confeti en toda la pantalla
+         */
+        function triggerCelebrationConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    zIndex: 100
+                });
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 70,
+                        angle: 60,
+                        spread: 70,
+                        origin: { x: 0, y: 0.65 },
+                        zIndex: 100
+                    });
+                    confetti({
+                        particleCount: 70,
+                        angle: 120,
+                        spread: 70,
+                        origin: { x: 1, y: 0.65 },
+                        zIndex: 100
+                    });
+                }, 200);
+            }
+        }
+
+        /**
+         * Muestra una cara triste gigante en toda la pantalla cuando la respuesta es incorrecta
+         */
+        function triggerSadFaceOverlay() {
+            const overlay = document.getElementById('sad-overlay');
+            const content = document.getElementById('sad-content');
+            
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            content.classList.remove('animate-sad-face');
+            void content.offsetWidth;
+            content.classList.add('animate-sad-face');
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }, 1450);
+        }
+
+        /**
+         * Valida la respuesta del estudiante
+         */
+        function validateAnswer() {
+            if (isTransitioning) return;
+
+            const inputEl = document.getElementById('answer-input');
+            const problemBox = document.getElementById('problem-box');
+            const rawValue = inputEl.value.trim();
+
+            if (rawValue === '') {
+                showFeedback('⚠️ Por favor, escribe un número antes de comprobar.', 'warning');
+                inputEl.focus();
+                return;
+            }
+
+            const studentAnswer = parseInt(rawValue, 10);
+            const correctAnswer = shuffledProblems[currentIndex].answer;
+
+            if (studentAnswer === correctAnswer) {
+                isTransitioning = true;
+                inputEl.disabled = true;
+                playSound('success');
+                triggerCelebrationConfetti();
+
+                inputEl.classList.remove('border-indigo-400', 'bg-indigo-50/70', 'border-rose-500', 'bg-rose-100');
+                inputEl.classList.add('border-emerald-500', 'bg-emerald-100', 'text-emerald-800');
+                
+                problemBox.classList.add('animate-pop');
+                setTimeout(() => problemBox.classList.remove('animate-pop'), 350);
+
+                showFeedback('🎉 ¡Excelente! Respuesta correcta. Pasando a la siguiente página...', 'success');
+
+                setTimeout(() => {
+                    currentIndex++;
+                    isTransitioning = false;
+                    if (currentIndex < shuffledProblems.length) {
+                        renderCurrentProblem();
+                    } else {
+                        showCompletionScreen();
+                    }
+                }, 1500);
+
+            } else {
+                totalMistakes++;
+                playSound('error');
+                triggerSadFaceOverlay();
+
+                inputEl.classList.remove('border-indigo-400', 'bg-indigo-50/70');
+                inputEl.classList.add('border-rose-500', 'bg-rose-100', 'animate-shake');
+                
+                setTimeout(() => {
+                    inputEl.classList.remove('animate-shake');
+                }, 450);
+
+                showFeedback('❌ Respuesta incorrecta. Revisa tu operación en el cuaderno e inténtalo de nuevo.', 'error');
+                
+                setTimeout(() => {
+                    inputEl.focus();
+                    inputEl.select();
+                }, 1500);
+            }
+        }
+
+        /**
+         * Muestra mensajes estilizados en la interfaz
+         */
+        function showFeedback(message, type) {
+            const feedbackEl = document.getElementById('feedback-box');
+            feedbackEl.textContent = message;
+            feedbackEl.classList.remove('opacity-0', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800', 'bg-amber-100', 'text-amber-800');
+            
+            if (type === 'success') {
+                feedbackEl.classList.add('opacity-100', 'bg-green-100', 'text-green-800', 'border', 'border-green-300');
+            } else if (type === 'error') {
+                feedbackEl.classList.add('opacity-100', 'bg-red-100', 'text-red-800', 'border', 'border-red-300');
+            } else {
+                feedbackEl.classList.add('opacity-100', 'bg-amber-100', 'text-amber-800', 'border', 'border-amber-300');
+            }
+        }
+
+        /**
+         * Muestra la pantalla final al completar los 30 ejercicios
+         */
+        function showCompletionScreen() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            const compScreen = document.getElementById('completion-screen');
+            compScreen.classList.remove('hidden');
+            compScreen.classList.add('flex');
+            triggerCelebrationConfetti();
+
+            const statsEl = document.getElementById('summary-stats');
+            statsEl.textContent = `30 / 30 Problemas Resueltos (Intentos extra: ${totalMistakes})`;
+        }
+
+        function restartActivity() {
+            startActivity();
+        }
+
+        document.getElementById('answer-input').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                validateAnswer();
+            }
+        });
+
+        window.onload = startActivity;
+    </script>
+</body>
+</html>
